@@ -594,7 +594,7 @@ def pick_label(buttons, pressed):
 
 
 def answer_button(page, label):
-    """Instagram's website cannot press a DM button, so the bot sends the button's own label as the reply, which these funnels accept."""
+    """Instagram's website cannot press a DM button, so the bot sends the button's own label as a reply. Some funnels ignore typed replies, so check_waiting asks the owner to tap if nothing comes back."""
     box = page.get_by_role("textbox").first
     box.click()
     page.keyboard.type(label, delay=60)
@@ -889,9 +889,16 @@ def check_waiting():
             save(job)
         links = [link for link in dm["links"] if link not in seen_links(creator)]
         if not links and dm.get("tapped"):
+            job["unconfirmed"] = dm["tapped"]
+            save(job)
             say(f"Answered \"{dm['tapped']}\" in @{creator}'s DM. Waiting for the link.")
             continue
         if not links:
+            if label := job.pop("unconfirmed", ""):  # the reply got no link back, so only a real tap can move this funnel
+                job["told"] = True
+                save(job)
+                say(f"@{creator} didn't react to the reply. Tap \"{label}\" in your Instagram chat with them. The bot will read the link they send back.")
+                continue
             before = (job.get("action") or {}).get("dm_text_before", "")
             told_buttons = job.get("told_buttons", [])
             new_buttons = [label for label in dm.get("buttons", []) if label not in told_buttons]
@@ -985,8 +992,6 @@ def build_from_text(name, text, summary):
 
 def build_from_link(url):
     """Follows a non-GitHub page: repos it points to get reviewed, otherwise its instructions get built."""
-    parts = urllib.parse.urlsplit(url)
-    name = ([s for s in parts.path.split("/") if s] or [parts.hostname or "project"])[-1]
     try:
         text, links = fetch_page(url)
     except Exception as e:
@@ -996,10 +1001,13 @@ def build_from_link(url):
         return [job]
     if landed := github_links(links[:1]):  # a redirect onto a repo means that repo, and the page's other links are GitHub's menus
         return process_links(landed)
-    host = (urllib.parse.urlsplit(links[0] if links else url).hostname or "").lower()
+    final = links[0] if links else url  # where a tracking link really landed, which is the name worth keeping
+    parts = urllib.parse.urlsplit(final)
+    name = ([s for s in parts.path.split("/") if s] or [parts.hostname or "project"])[-1]
+    host = (parts.hostname or "").lower()
     # A site linking its own GitHub org is usually just its footer, not what the page is telling you to install.
     repos = [repo for repo in github_links(links) if repo.split("/")[3].lower() not in host]
-    return process_links(repos[:5]) if repos else build_from_text(name, text, f"Built from the page at {url}")
+    return process_links(repos[:5]) if repos else build_from_text(name, text, f"Built from the page at {final}")
 
 
 def route_link(url):
@@ -1321,6 +1329,7 @@ def doctor():
     """Checks everything the bot needs and says how to fix what is missing."""
     checks = [("claude command", bool(shutil.which("claude")), "Install Claude Code and log in: https://claude.com/claude-code"),
               ("git command", bool(shutil.which("git")), "Install git."),
+              ("Google Chrome", Path("/Applications/Google Chrome.app").exists(), "Install Google Chrome. The bot uses it to read pages and Instagram."),
               ("Telegram token", (ROOT / "token").is_file() or "TELEGRAM_BOT_TOKEN" in os.environ, f"Make a bot with @BotFather and save its token in {ROOT / 'token'}"),
               ("Telegram pairing", (ROOT / "chat_id").is_file(), "Start the bot and send it the code it prints."),
               ("Instagram login (optional)", (ROOT / "ig-browser").is_dir(), "Run: ./reelbot.py login")]

@@ -11,7 +11,7 @@ It runs as a background service, so it works while you are away from the compute
 | --- | --- |
 | A video link | Downloads it, transcribes it, reads the frames, and finds the tool it promotes. |
 | A GitHub link | Clones it into quarantine, reviews it, and offers to install it. |
-| A "comment WORD and I'll DM you" reel | After one tap: follows the creator, comments the word, answers the buttons in their DM, and reads the link they send. |
+| A "comment WORD and I'll DM you" reel | After one tap: follows the creator, comments the word, replies to the buttons in their DM, and reads the link they send. If the funnel ignores the reply, the bot asks you to tap the button in Instagram. |
 | A web page, PDF or text file | Builds what it describes in a sandbox folder. |
 | A description (40+ characters) | Builds it in a sandbox folder. |
 

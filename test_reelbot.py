@@ -399,6 +399,11 @@ sent.clear()
 r.check_waiting()
 r.check_waiting()
 assert seen_tap == [[], ["i'm following"]] and "Answered" in sent[0]["text"]
+# a reply the funnel ignored comes back to the owner once, as a tap to make
+assert len(sent) == 2 and "didn't react" in sent[1]["text"] and "I'm following" in sent[1]["text"]
+r.check_waiting()
+assert len(sent) == 2
+finished = r.load(tap_watch["id"]); finished["state"] = "expired"; r.save(finished)
 
 # a button that opens a link feeds the normal path, and tapping stops after three presses
 btn_watch = r.new_job("u")
@@ -453,6 +458,14 @@ r.fetch_page = lambda url: ("x" * 300, ["https://github.com/real/repo?mcp_token=
 got.clear()
 r.build_from_link("https://my.manychat.com/r?act=1")
 assert got == [["https://github.com/real/repo"]]
+# a tracking link is named after where it landed, not its token
+named = []
+real_build = r.build_from_text
+r.build_from_text = lambda name, text, summary: named.append((name, summary)) or []
+r.fetch_page = lambda url: ("a guide with enough words in it to be read", ["https://chen.example/guides/good-name"])
+r.build_from_link("https://app.example/api/click/eyJhbGciOi")
+assert named == [("good-name", "Built from the page at https://chen.example/guides/good-name")]
+r.build_from_text = real_build
 r.fetch_page = real_fetch
 with tempfile.TemporaryDirectory() as d:
     base = Path(d)

@@ -15,6 +15,7 @@ chmod +x "$home/app/reelbot.py"
 if [ ! -s "$home/token" ]; then
   echo "Make a bot with @BotFather in Telegram, then paste its token here (it stays in $home/token):"
   read -rs token
+  curl -fs "https://api.telegram.org/bot$token/getMe" >/dev/null || { echo "Telegram rejected that token. Run ./install.sh again."; exit 1; }
   (umask 077; printf '%s' "$token" > "$home/token")
 fi
 
@@ -46,6 +47,7 @@ cat > "$plist" <<PLIST
 PLIST
 
 launchctl bootout "gui/$(id -u)/com.reelbot" 2>/dev/null || true
+[ -s "$home/chat_id" ] || : > "$home/bot.log"  # so the pairing code printed below is this run's
 launchctl bootstrap "gui/$(id -u)" "$plist"
 echo "reelbot is running. Log: $home/bot.log"
 if [ ! -s "$home/chat_id" ]; then
