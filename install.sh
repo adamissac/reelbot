@@ -15,7 +15,7 @@ chmod +x "$home/app/reelbot.py"
 if [ ! -s "$home/token" ]; then
   echo "Make a bot with @BotFather in Telegram, then paste its token here (it stays in $home/token):"
   read -rs token
-  curl -fs "https://api.telegram.org/bot$token/getMe" >/dev/null || { echo "Telegram rejected that token. Run ./install.sh again."; exit 1; }
+  curl -fs -m 20 "https://api.telegram.org/bot$token/getMe" >/dev/null || { echo "Telegram rejected that token. Run ./install.sh again."; exit 1; }
   (umask 077; printf '%s' "$token" > "$home/token")
 fi
 
